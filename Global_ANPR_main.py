@@ -3,7 +3,7 @@ import cv2
 # The steps of the project:
 # 1- We'll use YOLO for license plate detection (object detection).
 # 2- We'll use Bytetracker model to keep tracking our object on the road (object tracking).
-# 3- Lastly using easy OCR we'll read the license plate contents.
+# 3- Lastly using google vision api we'll read the license plate contents.
 import Helper_util
 from Helper_util import assign_car, read_license_plate, write_csv
 
