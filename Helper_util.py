@@ -216,10 +216,7 @@ def read_plate(cropped_plate):
             print("No text detected in the plate.")
             return "", 0.0
 
-        # Get image dimensions
-        height, width = cropped_plate.shape[:2]
-
-        # Extract all detected text
+        # Extract all detected text (first entry contains the full description)
         all_text = texts[0].description if texts else ""
 
         # Filter for ASCII alphanumeric characters and spaces
@@ -257,11 +254,12 @@ def read_plate(cropped_plate):
         # Recombine numbers and letters
         plate_text = f"{numbers} {letters}"  # Changed order here
 
-        # Extract the confidence score from the response
+        # Get the confidence score from individual words or the overall annotation
         confidence_score = 0.0
-        if texts and len(texts) > 1:
-            # Confidence score is usually present in the first text annotation
-            confidence_score = texts[1].confidence  # Note: Adjust this based on the API response structure
+        if response.full_text_annotation:
+            confidence_score = sum(p.confidence for p in response.full_text_annotation.pages[0].blocks) / len(response.full_text_annotation.pages[0].blocks)
+        else:
+            confidence_score = sum(t.confidence for t in response.text_annotations[1:]) / len(response.text_annotations[1:])
 
         print("Detected text in plate:", plate_text.strip())
         print("Confidence score:", confidence_score)
@@ -272,9 +270,10 @@ def read_plate(cropped_plate):
 
         return plate_text.strip(), confidence_score
 
-    except ServiceUnavailable as e:
-        print(f"Service unavailable: {e}")
+    except Exception as e:
+        print(f"Error during text detection: {e}")
         return "", 0.0
+
 
 
 
