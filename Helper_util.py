@@ -1,6 +1,7 @@
 from google.cloud import vision
 import cv2
 import json
+import re
 json_path = "API_Credentials/client_secret_616972654566-tbjlta6vijmal5rlq07hoba3nja2f7n3.apps.googleusercontent.com.json"
 
 with open(json_path, 'r') as file:
@@ -260,3 +261,36 @@ def preprocess_frame(frame, x1, y1, x2, y2):
     )
 
     return license_plate_crop_thresh
+
+
+# New format_license_re function using regex
+def format_license_re(license_text):
+    # Regex pattern to match a standard Saudi license plate pattern (modify as needed)
+    # Assuming Saudi plates follow the format: 3 digits + 3 letters (Example: 123ABC)
+    pattern = r"(\d{1,3})([A-Za-z]{1,3})"
+    
+    match = re.match(pattern, license_text)
+    if match:
+        digits, letters = match.groups()
+        return f"{digits}-{letters}".upper()
+    else:
+        return license_text.upper()
+
+# Check and replace unaccepted characters for Saudi license plates
+def validate_license_plate(license_text):
+    # Saudi plates generally allow A-Z (some limited set of letters, adjust accordingly)
+    allowed_letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'  # Exclude I, O, Q for example
+    allowed_digits = '0123456789'
+    
+    valid_license = []
+    
+    for char in license_text:
+        if char in allowed_digits:
+            valid_license.append(char)
+        elif char in allowed_letters:
+            valid_license.append(char)
+        else:
+            # Replace with a placeholder or closest valid character
+            valid_license.append('_')  # Placeholder or handle replacement logic here
+    
+    return ''.join(valid_license)
