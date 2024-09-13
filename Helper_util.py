@@ -190,7 +190,7 @@ def read_license_plate(cropped_plate):
     if license_complies_format(plate_text):
         # Format the license plate according to the Saudi format (4 numbers-3 letters)
         formatted_plate = format_license(plate_text)
-        confidence = texts[0].score if hasattr(texts[0], 'score') else 1.0
+        confidence = texts[0].score if hasattr(texts[0], 'score') else 0.0
         return formatted_plate, confidence
 
     return None, None
