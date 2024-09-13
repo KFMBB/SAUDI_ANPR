@@ -35,7 +35,15 @@ while isReadingFrames:
         detections = model.track(frame, persist = True, tracker="bytetrack.yaml")[0]  # the [0] will unpack the models bbox, confidence and class_id as a tuple.
         vehicles_detected = []  # Store each vehicle detected in the list.
         for detection in detections.boxes.data.tolist():
-            x1, y1, x2, y2, track_id, score, class_id = detection
+            if len(detection) == 6:  # Format: [x1, y1, x2, y2, score, class_id]
+                x1, y1, x2, y2, score, class_id = detection
+                track_id = None
+            elif len(detection) == 7:  # Format: [x1, y1, x2, y2, track_id, score, class_id]
+                x1, y1, x2, y2, track_id, score, class_id = detection
+            else:
+                print(f"Unexpected detection format: {detection}")
+                continue  # Skip this detection or handle it as needed
+                
             if int(class_id) in vehicles:  # If the object detected is a vehicle:
                 vehicles_detected.append([x1, y1, x2, y2, track_id, score])  # Add bbox, confidence to the list of detected vehicles.
 
