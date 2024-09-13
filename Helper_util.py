@@ -197,7 +197,7 @@ def read_license_plate(cropped_plate):
 
 
 
-def read_plate(cropped_plate):
+def read_plate2(cropped_plate):
     # Convert the cropped plate image to bytes
     success, encoded_image = cv2.imencode('.png', cropped_plate)
     content = encoded_image.tobytes()
@@ -342,6 +342,104 @@ def preprocess_frame(frame, x1, y1, x2, y2):
     )
 
     return license_plate_crop_thresh
+
+def read_plate(cropped_plate):
+    # Convert the cropped plate image to bytes
+    success, encoded_image = cv2.imencode('.png', cropped_plate)
+    content = encoded_image.tobytes()
+
+    # Create a Vision API client
+    client = vision.ImageAnnotatorClient()
+
+    image = vision.Image(content=content)
+
+    try:
+        # Perform text detection
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+
+        if not texts:
+            print("No text detected in the plate.")
+            return "", 0.0
+
+        # Extract all detected text (first entry contains the full description)
+        all_text = texts[0].description if texts else ""
+
+        # Filter for ASCII alphanumeric characters and spaces
+        filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
+
+        # Split the text into parts
+        parts = filtered_text.split()
+
+        # Check if "KSA" is present
+        if "KSA" in parts:
+            # For plates with KSA, take the last part (should be the right side)
+            plate_text = parts[-1]
+        else:
+            # For other plates, combine all parts, focusing on sequences of 3-4 characters
+            plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
+
+        # Ensure we have both letters and numbers
+        if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
+            # If not, try to extract letters and numbers separately
+            letters = ''.join(c for c in filtered_text if c.isalpha())
+            numbers = ''.join(c for c in filtered_text if c.isdigit())
+            plate_text = f"{numbers} {letters}"  # Changed order here
+
+        # Remove KSA if it's still present in the final plate_text
+        plate_text = plate_text.replace("KSA", "").strip()
+
+        # Split the plate text into numbers and letters
+        numbers = ''.join(c for c in plate_text if c.isdigit())
+        letters = ''.join(c for c in plate_text if c.isalpha())
+
+        # If the number part has more than 4 digits, remove the last digit
+        if len(numbers) > 4:
+            numbers = numbers[:4]
+
+        # Recombine numbers and letters
+        plate_text = f"{numbers} {letters}"  # Changed order here
+
+        # Extract confidence scores similar to the `detect_document` structure
+        block_confidences = []
+        word_confidences = []
+        symbol_confidences = []
+
+        if response.full_text_annotation:
+            for page in response.full_text_annotation.pages:
+                for block in page.blocks:
+                    block_confidences.append(block.confidence)
+
+                    for paragraph in block.paragraphs:
+                        for word in paragraph.words:
+                            word_confidences.append(word.confidence)
+
+                            for symbol in word.symbols:
+                                symbol_confidences.append(symbol.confidence)
+
+            # Average confidence scores
+            avg_block_confidence = sum(block_confidences) / len(block_confidences) if block_confidences else 0.0
+            avg_word_confidence = sum(word_confidences) / len(word_confidences) if word_confidences else 0.0
+            avg_symbol_confidence = sum(symbol_confidences) / len(symbol_confidences) if symbol_confidences else 0.0
+
+        else:
+            avg_block_confidence = avg_word_confidence = avg_symbol_confidence = 0.0
+
+        print(f"Detected text in plate: {plate_text.strip()}")
+        print(f"Average block confidence: {avg_block_confidence}")
+        print(f"Average word confidence: {avg_word_confidence}")
+        print(f"Average symbol confidence: {avg_symbol_confidence}")
+
+        if response.error.message:
+            raise Exception(f'{response.error.message}\nFor more info on error messages, check: '
+                            'https://cloud.google.com/apis/design/errors')
+
+        # You can choose which confidence score to return; for example, word confidence
+        return plate_text.strip(), avg_word_confidence
+
+    except Exception as e:
+        print(f"Error during text detection: {e}")
+        return "", 0.0
 
 
 # New format_license_re function using regex
