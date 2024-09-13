@@ -145,20 +145,55 @@ def read_license_plate(cropped_plate):
         print("No text detected in the plate.")
         return None, None
 
-    # Extract the full detected text
+    # Extract all detected text
     all_text = texts[0].description if texts else ""
 
-    # Filter for ASCII alphanumeric characters
-    filtered_text = ''.join(char for char in all_text if char.isascii() and char.isalnum())
+    # Filter for ASCII alphanumeric characters and spaces
+    filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
+
+    # Split the text into parts
+    parts = filtered_text.split()
+
+    # Check if "KSA" is present
+    if "KSA" in parts:
+        # For plates with KSA, take the last part (should be the right side)
+        plate_text = parts[-1]
+    else:
+        # For other plates, combine all parts, focusing on sequences of 3-4 characters
+        plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
+
+    # Ensure we have both letters and numbers
+    if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
+        # If not, try to extract letters and numbers separately
+        letters = ''.join(c for c in filtered_text if c.isalpha())
+        numbers = ''.join(c for c in filtered_text if c.isdigit())
+        plate_text = f"{numbers} {letters}"  # Changed order here
+
+    # Remove KSA if it's still present in the final plate_text
+    plate_text = plate_text.replace("KSA", "").strip()
+
+    # Split the plate text into numbers and letters
+    numbers = ''.join(c for c in plate_text if c.isdigit())
+    letters = ''.join(c for c in plate_text if c.isalpha())
+
+    # If the number part has more than 4 digits, remove the last digit
+    if len(numbers) > 4:
+        numbers = numbers[:4]
+
+    # Recombine numbers and letters
+    plate_text = f"{numbers} {letters}"  # Changed order here
+
+    print("Detected text in plate:", plate_text.strip())
 
     # Check if the filtered text complies with the Saudi license plate format
-    if license_complies_format(filtered_text):
+    if license_complies_format(plate_text):
         # Format the license plate according to the Saudi format (4 numbers-3 letters)
-        formatted_plate = format_license(filtered_text)
+        formatted_plate = format_license(plate_text)
         confidence = texts[0].score if hasattr(texts[0], 'score') else 1.0
         return formatted_plate, confidence
 
     return None, None
+
 
 # More loose assign_car:
 def assign_car(license_plate, vehicle_track_ids, tolerance=0.1):
