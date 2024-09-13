@@ -196,6 +196,88 @@ def read_license_plate(cropped_plate):
     return None, None
 
 
+
+def read_plate(cropped_plate):
+    # Convert the cropped plate image to bytes
+    success, encoded_image = cv2.imencode('.png', cropped_plate)
+    content = encoded_image.tobytes()
+
+    # Create a Vision API client
+    client = vision.ImageAnnotatorClient()
+
+    image = vision.Image(content=content)
+
+    try:
+        # Perform text detection
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+
+        if not texts:
+            print("No text detected in the plate.")
+            return "", 0.0
+
+        # Get image dimensions
+        height, width = cropped_plate.shape[:2]
+
+        # Extract all detected text
+        all_text = texts[0].description if texts else ""
+
+        # Filter for ASCII alphanumeric characters and spaces
+        filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
+
+        # Split the text into parts
+        parts = filtered_text.split()
+
+        # Check if "KSA" is present
+        if "KSA" in parts:
+            # For plates with KSA, take the last part (should be the right side)
+            plate_text = parts[-1]
+        else:
+            # For other plates, combine all parts, focusing on sequences of 3-4 characters
+            plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
+
+        # Ensure we have both letters and numbers
+        if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
+            # If not, try to extract letters and numbers separately
+            letters = ''.join(c for c in filtered_text if c.isalpha())
+            numbers = ''.join(c for c in filtered_text if c.isdigit())
+            plate_text = f"{numbers} {letters}"  # Changed order here
+
+        # Remove KSA if it's still present in the final plate_text
+        plate_text = plate_text.replace("KSA", "").strip()
+
+        # Split the plate text into numbers and letters
+        numbers = ''.join(c for c in plate_text if c.isdigit())
+        letters = ''.join(c for c in plate_text if c.isalpha())
+
+        # If the number part has more than 4 digits, remove the last digit
+        if len(numbers) > 4:
+            numbers = numbers[:4]
+
+        # Recombine numbers and letters
+        plate_text = f"{numbers} {letters}"  # Changed order here
+
+        # Extract the confidence score from the response
+        confidence_score = 0.0
+        if texts and len(texts) > 1:
+            # Confidence score is usually present in the first text annotation
+            confidence_score = texts[1].confidence  # Note: Adjust this based on the API response structure
+
+        print("Detected text in plate:", plate_text.strip())
+        print("Confidence score:", confidence_score)
+
+        if response.error.message:
+            raise Exception(f'{response.error.message}\nFor more info on error messages, check: '
+                            'https://cloud.google.com/apis/design/errors')
+
+        return plate_text.strip(), confidence_score
+
+    except ServiceUnavailable as e:
+        print(f"Service unavailable: {e}")
+        return "", 0.0
+
+
+
 # More loose assign_car:
 def assign_car(license_plate, vehicle_track_ids, tolerance=0.1):
     """
