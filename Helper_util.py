@@ -197,3 +197,31 @@ def assign_car(license_plate, vehicle_track_ids, tolerance=0.1):
         return vehicle_track_ids[car_indx][:5]
     # Return None if no matching vehicle is found
     return -1, -1, -1, -1, -1
+
+
+# Preprocess frame by cropping the license plate, converting to grayscale, and applying adaptive thresholding
+def preprocess_frame(frame, x1, y1, x2, y2):
+    """
+    Preprocess the given frame to crop the license plate, convert it to grayscale,
+    and apply adaptive thresholding.
+
+    Args:
+        frame (numpy array): The input frame containing the car/license plate.
+        x1, y1, x2, y2 (int): Bounding box coordinates of the license plate.
+
+    Returns:
+        license_plate_crop_thresh (numpy array): Preprocessed license plate image after adaptive thresholding.
+    """
+    # Crop the license plate from the frame using bounding box coordinates
+    license_plate_crop = frame[int(y1):int(y2), int(x1): int(x2), :]
+
+    # Convert the cropped license plate to grayscale
+    license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
+
+    # Apply adaptive thresholding to the grayscale image
+    license_plate_crop_thresh = cv2.adaptiveThreshold(
+        license_plate_crop_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 11, 2
+    )
+
+    return license_plate_crop_thresh

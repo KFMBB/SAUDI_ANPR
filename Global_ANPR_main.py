@@ -5,7 +5,7 @@ import cv2
 # 2- We'll use Bytetracker model to keep tracking our object on the road (object tracking).
 # 3- Lastly using google vision api we'll read the license plate contents.
 import Helper_util
-from Helper_util import assign_car, read_license_plate, write_csv
+from Helper_util import assign_car, read_license_plate, write_csv, preprocess_frame
 
 results = {}  # We'll save our results for processing later.
 
@@ -49,17 +49,7 @@ while isReadingFrames:
 
             if car_id != -1:  # If the car was assigned to a license plate successfully go to the processing pipeline
 
-                # crop license plate:
-                license_plate_crop = frame[int(y1):int(y2), int(x1): int(x2), :]
-                # We essentially took the bbox cords and then processed the whole frame, we took slices from y1 till
-                # y2 and then x1 till x2 and lastly the rgb or bgr.
-
-                # Process license plate number: why? well to make it easier for the ocr model to process, we'll grey
-                # scale the license plate as colors don't really help the model with reading a plate.
-                license_plate_crop_gray = cv2.cvtColor(license_plate_crop, cv2.COLOR_BGR2GRAY)
-                # apply threshold: If the pixel value is less than threshold it becomes white (255),
-                # else it becomes black that's why we call it binary thresholding.
-                _, license_plate_crop_thresh = cv2.threshold(license_plate_crop_gray, threshold, 255, cv2.THRESH_BINARY_INV)
+                license_plate_crop_thresh = preprocess_frame(frame, x1, y1, x2, y2)
 
                 # Now that we have processed our license plate image we'll read it using easy ocr:
                 license_plate_text, license_plate_text_score = read_license_plate(license_plate_crop_thresh)
