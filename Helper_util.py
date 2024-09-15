@@ -2,12 +2,16 @@ from google.cloud import vision
 import cv2
 import json
 import re
+import easyocr
 json_path = "API_Credentials/client_secret_616972654566-tbjlta6vijmal5rlq07hoba3nja2f7n3.apps.googleusercontent.com.json"
 
 with open(json_path, 'r') as file:
     config = json.load(file)
 
 client = vision.ImageAnnotatorClient.from_service_account_json(json_path)
+
+# I'll give easyocr a try:
+reader = easyocr.Reader(['en'])
 # Mapping dictionaries for character conversion
 # Mapping characters that can be confused with numbers
 dict_char_to_int = {
@@ -121,6 +125,29 @@ def format_license(text):
 
     return formatted_license_plate
 
+
+def read_license_plate_Eocr(license_plate_crop):
+    """
+    Read the license plate text from the given cropped threshed image.
+
+    Args:
+        license_plate_crop (Image): Cropped image containing the license plate.
+
+    Returns:
+        tuple: Tuple containing the formatted license plate text and its confidence score.
+    """
+
+    detections = reader.readtext(license_plate_crop)
+
+    for detection in detections:
+        bbox, text, score = detection
+
+        text = text.upper().replace(' ', '')
+
+        if license_complies_format(text):
+            return format_license(text), score
+
+    return None, None
 
 def read_license_plate(cropped_plate):
     """
