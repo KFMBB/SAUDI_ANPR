@@ -5,7 +5,7 @@ import cv2
 # 2- We'll use Bytetracker model to keep tracking our object on the road (object tracking).
 # 3- Lastly using google vision api we'll read the license plate contents.
 import Helper_util
-from Helper_util import assign_car, read_license_plate, write_csv, preprocess_frame,read_plate,read_license_plate_Eocr
+from Helper_util import assign_car, read_license_plate, write_csv, preprocess_frame,read_plate,read_license_plate_Eocr,read_license_plate_combined
 
 results = {}  # We'll save our results for processing later.
 
@@ -60,7 +60,7 @@ while isReadingFrames:
                 license_plate_crop_thresh = preprocess_frame(frame, x1, y1, x2, y2)
 
                 # Now that we have processed our license plate image we'll read it using easy ocr:
-                license_plate_text, license_plate_text_score = read_license_plate_Eocr(license_plate_crop_thresh)
+                license_plate_text, license_plate_text_score = read_license_plate_combined(license_plate_crop_thresh)
 
                 # Save the results:
                 if license_plate_text is not None:
