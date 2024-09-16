@@ -5,12 +5,6 @@ import re
 import easyocr
 import langid
 import pytesseract
-json_path = "API_Credentials/client_secret_616972654566-tbjlta6vijmal5rlq07hoba3nja2f7n3.apps.googleusercontent.com.json"
-
-with open(json_path, 'r') as file:
-    config = json.load(file)
-
-client = vision.ImageAnnotatorClient.from_service_account_json(json_path)
 
 # I'll give easyocr a try:
 reader = easyocr.Reader(['en'])
@@ -21,7 +15,7 @@ dict_char_to_int = {
     'I': '1',  # I looks like 1
     'Z': '2',  # Z looks like 2
     'B': '8',  # B looks like 8
-    'S': '5'   # S looks like 5
+    'S': '5'  # S looks like 5
 }
 
 # Mapping numbers that can be confused with letters
@@ -30,8 +24,9 @@ dict_int_to_char = {
     '1': 'I',  # 1 can look like I
     '2': 'Z',  # 2 can look like Z
     '8': 'B',  # 8 can look like B
-    '5': 'S'   # 5 can look like S
+    '5': 'S'  # 5 can look like S
 }
+
 
 def write_csv(results, output_path):
     """
@@ -50,8 +45,8 @@ def write_csv(results, output_path):
             for car_id in results[frame_nmr].keys():
                 print(results[frame_nmr][car_id])
                 if 'car' in results[frame_nmr][car_id].keys() and \
-                   'license_plate' in results[frame_nmr][car_id].keys() and \
-                   'text' in results[frame_nmr][car_id]['license_plate'].keys():
+                        'license_plate' in results[frame_nmr][car_id].keys() and \
+                        'text' in results[frame_nmr][car_id]['license_plate'].keys():
                     f.write('{},{},{},{},{},{},{}\n'.format(frame_nmr,
                                                             car_id,
                                                             '[{} {} {} {}]'.format(
@@ -128,7 +123,6 @@ def format_license(text):
     return formatted_license_plate
 
 
-
 def filter_english_text(text):
     """
     Use langid to filter out non-English parts of the text.
@@ -171,6 +165,8 @@ def read_license_plate_combined(license_plate_crop):
         return format_license(english_text), None
 
     return None, None
+
+
 def read_license_plate_Eocr(license_plate_crop):
     """
     Read the license plate text from the given cropped threshed image and filter out non-English text.
@@ -196,6 +192,8 @@ def read_license_plate_Eocr(license_plate_crop):
         # Check if the remaining text complies with Saudi license plate format
         if license_complies_format(english_text):
             return format_license(english_text), score
+
+
 # def read_license_plate_Eocr(license_plate_crop):
 #     """
 #     Read the license plate text from the given cropped threshed image.
@@ -219,79 +217,78 @@ def read_license_plate_Eocr(license_plate_crop):
 #
 #     return None, None
 
-def read_license_plate(cropped_plate):
-    """
-    Detect and format text from a cropped license plate using Google Vision API.
-
-    Args:
-        cropped_plate (Image): Cropped image containing the license plate.
-
-    Returns:
-        str: Formatted license plate text.
-    """
-    # Convert the cropped plate image to bytes
-    success, encoded_image = cv2.imencode('.png', cropped_plate)
-    content = encoded_image.tobytes()
-
-    image = vision.Image(content=content)
-
-    # Perform text detection
-    response = client.text_detection(image=image)
-    texts = response.text_annotations
-
-    if not texts:
-        print("No text detected in the plate.")
-        return None, None
-
-    # Extract all detected text
-    all_text = texts[0].description if texts else ""
-
-    # Filter for ASCII alphanumeric characters and spaces
-    filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
-
-    # Split the text into parts
-    parts = filtered_text.split()
-
-    # Check if "KSA" is present
-    if "KSA" in parts:
-        # For plates with KSA, take the last part (should be the right side)
-        plate_text = parts[-1]
-    else:
-        # For other plates, combine all parts, focusing on sequences of 3-4 characters
-        plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
-
-    # Ensure we have both letters and numbers
-    if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
-        # If not, try to extract letters and numbers separately
-        letters = ''.join(c for c in filtered_text if c.isalpha())
-        numbers = ''.join(c for c in filtered_text if c.isdigit())
-        plate_text = f"{numbers} {letters}"  # Changed order here
-
-    # Remove KSA if it's still present in the final plate_text
-    plate_text = plate_text.replace("KSA", "").strip()
-
-    # Split the plate text into numbers and letters
-    numbers = ''.join(c for c in plate_text if c.isdigit())
-    letters = ''.join(c for c in plate_text if c.isalpha())
-
-    # If the number part has more than 4 digits, remove the last digit
-    if len(numbers) > 4:
-        numbers = numbers[:4]
-
-    # Recombine numbers and letters
-    plate_text = f"{numbers} {letters}"  # Changed order here
-
-    print("Detected text in plate:", plate_text.strip())
-
-    # Check if the filtered text complies with the Saudi license plate format
-    if license_complies_format(plate_text):
-        # Format the license plate according to the Saudi format (4 numbers-3 letters)
-        formatted_plate = format_license(plate_text)
-        confidence = texts[0].score if hasattr(texts[0], 'score') else 0.0
-        return formatted_plate, confidence
-
-    return None, None
-
+# def read_license_plate(cropped_plate):
+#     """
+#     Detect and format text from a cropped license plate using Google Vision API.
+#
+#     Args:
+#         cropped_plate (Image): Cropped image containing the license plate.
+#
+#     Returns:
+#         str: Formatted license plate text.
+#     """
+#     # Convert the cropped plate image to bytes
+#     success, encoded_image = cv2.imencode('.png', cropped_plate)
+#     content = encoded_image.tobytes()
+#
+#     image = vision.Image(content=content)
+#
+#     # Perform text detection
+#     response = client.text_detection(image=image)
+#     texts = response.text_annotations
+#
+#     if not texts:
+#         print("No text detected in the plate.")
+#         return None, None
+#
+#     # Extract all detected text
+#     all_text = texts[0].description if texts else ""
+#
+#     # Filter for ASCII alphanumeric characters and spaces
+#     filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
+#
+#     # Split the text into parts
+#     parts = filtered_text.split()
+#
+#     # Check if "KSA" is present
+#     if "KSA" in parts:
+#         # For plates with KSA, take the last part (should be the right side)
+#         plate_text = parts[-1]
+#     else:
+#         # For other plates, combine all parts, focusing on sequences of 3-4 characters
+#         plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
+#
+#     # Ensure we have both letters and numbers
+#     if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
+#         # If not, try to extract letters and numbers separately
+#         letters = ''.join(c for c in filtered_text if c.isalpha())
+#         numbers = ''.join(c for c in filtered_text if c.isdigit())
+#         plate_text = f"{numbers} {letters}"  # Changed order here
+#
+#     # Remove KSA if it's still present in the final plate_text
+#     plate_text = plate_text.replace("KSA", "").strip()
+#
+#     # Split the plate text into numbers and letters
+#     numbers = ''.join(c for c in plate_text if c.isdigit())
+#     letters = ''.join(c for c in plate_text if c.isalpha())
+#
+#     # If the number part has more than 4 digits, remove the last digit
+#     if len(numbers) > 4:
+#         numbers = numbers[:4]
+#
+#     # Recombine numbers and letters
+#     plate_text = f"{numbers} {letters}"  # Changed order here
+#
+#     print("Detected text in plate:", plate_text.strip())
+#
+#     # Check if the filtered text complies with the Saudi license plate format
+#     if license_complies_format(plate_text):
+#         # Format the license plate according to the Saudi format (4 numbers-3 letters)
+#         formatted_plate = format_license(plate_text)
+#         confidence = texts[0].score if hasattr(texts[0], 'score') else 0.0
+#         return formatted_plate, confidence
+#
+#     return None, None
 
 
 def read_plate2(cropped_plate):
@@ -354,9 +351,11 @@ def read_plate2(cropped_plate):
         # Get the confidence score from individual words or the overall annotation
         confidence_score = 0.0
         if response.full_text_annotation:
-            confidence_score = sum(p.confidence for p in response.full_text_annotation.pages[0].blocks) / len(response.full_text_annotation.pages[0].blocks)
+            confidence_score = sum(p.confidence for p in response.full_text_annotation.pages[0].blocks) / len(
+                response.full_text_annotation.pages[0].blocks)
         else:
-            confidence_score = sum(t.confidence for t in response.text_annotations[1:]) / len(response.text_annotations[1:])
+            confidence_score = sum(t.confidence for t in response.text_annotations[1:]) / len(
+                response.text_annotations[1:])
 
         print("Detected text in plate:", plate_text.strip())
         print("Confidence score:", confidence_score)
@@ -370,8 +369,6 @@ def read_plate2(cropped_plate):
     except Exception as e:
         print(f"Error during text detection: {e}")
         return "", 0.0
-
-
 
 
 # More loose assign_car:
@@ -401,7 +398,7 @@ def assign_car(license_plate, vehicle_track_ids, tolerance=0.1):
 
         # Check if the license plate is within the vehicle's bounding box with some tolerance
         if (x1_lp > (x1_v - tol_w) and y1_lp > (y1_v - tol_h) and
-            x2_lp < (x2_v + tol_w) and y2_lp < (y2_v + tol_h)):
+                x2_lp < (x2_v + tol_w) and y2_lp < (y2_v + tol_h)):
             car_indx = j
             foundIt = True  # If the car's license plate was found then break and assign it.
             break
@@ -440,111 +437,13 @@ def preprocess_frame(frame, x1, y1, x2, y2):
 
     return license_plate_crop_thresh
 
-def read_plate(cropped_plate):
-    # Convert the cropped plate image to bytes
-    success, encoded_image = cv2.imencode('.png', cropped_plate)
-    content = encoded_image.tobytes()
-
-    # Create a Vision API client
-    client = vision.ImageAnnotatorClient()
-
-    image = vision.Image(content=content)
-
-    try:
-        # Perform text detection
-        response = client.text_detection(image=image)
-        texts = response.text_annotations
-
-        if not texts:
-            print("No text detected in the plate.")
-            return "", 0.0
-
-        # Extract all detected text (first entry contains the full description)
-        all_text = texts[0].description if texts else ""
-
-        # Filter for ASCII alphanumeric characters and spaces
-        filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
-
-        # Split the text into parts
-        parts = filtered_text.split()
-
-        # Check if "KSA" is present
-        if "KSA" in parts:
-            # For plates with KSA, take the last part (should be the right side)
-            plate_text = parts[-1]
-        else:
-            # For other plates, combine all parts, focusing on sequences of 3-4 characters
-            plate_text = ' '.join(part for part in parts if len(part) >= 3 and len(part) <= 4)
-
-        # Ensure we have both letters and numbers
-        if not (any(c.isalpha() for c in plate_text) and any(c.isdigit() for c in plate_text)):
-            # If not, try to extract letters and numbers separately
-            letters = ''.join(c for c in filtered_text if c.isalpha())
-            numbers = ''.join(c for c in filtered_text if c.isdigit())
-            plate_text = f"{numbers} {letters}"  # Changed order here
-
-        # Remove KSA if it's still present in the final plate_text
-        plate_text = plate_text.replace("KSA", "").strip()
-
-        # Split the plate text into numbers and letters
-        numbers = ''.join(c for c in plate_text if c.isdigit())
-        letters = ''.join(c for c in plate_text if c.isalpha())
-
-        # If the number part has more than 4 digits, remove the last digit
-        if len(numbers) > 4:
-            numbers = numbers[:4]
-
-        # Recombine numbers and letters
-        plate_text = f"{numbers} {letters}"  # Changed order here
-
-        # Extract confidence scores similar to the `detect_document` structure
-        block_confidences = []
-        word_confidences = []
-        symbol_confidences = []
-
-        if response.full_text_annotation:
-            for page in response.full_text_annotation.pages:
-                for block in page.blocks:
-                    block_confidences.append(block.confidence)
-
-                    for paragraph in block.paragraphs:
-                        for word in paragraph.words:
-                            word_confidences.append(word.confidence)
-
-                            for symbol in word.symbols:
-                                symbol_confidences.append(symbol.confidence)
-
-            # Average confidence scores
-            avg_block_confidence = sum(block_confidences) / len(block_confidences) if block_confidences else 0.0
-            avg_word_confidence = sum(word_confidences) / len(word_confidences) if word_confidences else 0.0
-            avg_symbol_confidence = sum(symbol_confidences) / len(symbol_confidences) if symbol_confidences else 0.0
-
-        else:
-            avg_block_confidence = avg_word_confidence = avg_symbol_confidence = 0.0
-
-        print(f"Detected text in plate: {plate_text.strip()}")
-        print(f"Average block confidence: {avg_block_confidence}")
-        print(f"Average word confidence: {avg_word_confidence}")
-        print(f"Average symbol confidence: {avg_symbol_confidence}")
-
-        if response.error.message:
-            raise Exception(f'{response.error.message}\nFor more info on error messages, check: '
-                            'https://cloud.google.com/apis/design/errors')
-
-        # You can choose which confidence score to return; for example, word confidence
-        return plate_text.strip(), avg_word_confidence
-
-    except Exception as e:
-        print(f"Error during text detection: {e}")
-        return "", 0.0
-
 
 # New format_license_re function using regex
 def format_license_re(license_text):
     # Regex pattern to match a standard Saudi license plate pattern (modify as needed)
     # Assuming Saudi plates follow the format: 3 digits + 3 letters (Example: 123ABC)
     pattern = r"(\d{1,3})([A-Za-z]{1,3})"
-    
+
     match = re.match(pattern, license_text)
     if match:
         digits, letters = match.groups()
@@ -552,14 +451,15 @@ def format_license_re(license_text):
     else:
         return license_text.upper()
 
+
 # Check and replace unaccepted characters for Saudi license plates
 def validate_license_plate(license_text):
     # Saudi plates generally allow A-Z (some limited set of letters, adjust accordingly)
     allowed_letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'  # Exclude I, O, Q for example
     allowed_digits = '0123456789'
-    
+
     valid_license = []
-    
+
     for char in license_text:
         if char in allowed_digits:
             valid_license.append(char)
@@ -568,7 +468,7 @@ def validate_license_plate(license_text):
         else:
             # Replace with a placeholder or closest valid character
             valid_license.append('_')  # Placeholder or handle replacement logic here
-    
+
     return ''.join(valid_license)
 
 
