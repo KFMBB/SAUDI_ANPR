@@ -1,16 +1,12 @@
 import cv2
 import csv
 import os
-import numpy as np
 from ultralytics import YOLO
 from Helper_util import preprocess_frame, assign_car
 
 # Load YOLO models for vehicles and license plates
 vehicle_detector = YOLO('/content/drive/MyDrive/ANPR/models/yolov8n.pt')
-
-# Load YOLOv4 model for license plate detection
-net = cv2.dnn.readNet("/content/drive/MyDrive/ANPR/models/yolov4_license_plate.weights",
-                      "/content/drive/MyDrive/ANPR/models/yolov4_license_plate.cfg")
+license_plate_detector = YOLO('/content/drive/MyDrive/ANPR/models/best_license_plate_detector.pt')
 
 # Define video capture
 cap = cv2.VideoCapture("/content/drive/MyDrive/ANPR/input/v10044g50000cgaepc3c77uf8m066png.mp4")
@@ -27,34 +23,6 @@ csv_writer.writerow(['Frame', 'Vehicle_ID', 'BBox_Vehicle', 'BBox_License_Plate'
 # Set vehicle class IDs
 vehicle_classes = [2, 3, 5, 7]  # IDs for vehicles
 
-def detect_license_plates(frame, net):
-    height, width = frame.shape[:2]
-    blob = cv2.dnn.blobFromImage(frame, 1/255.0, (416, 416), swapRB=True, crop=False)
-    net.setInput(blob)
-    output_layers_names = net.getUnconnectedOutLayersNames()
-    layerOutputs = net.forward(output_layers_names)
-
-    boxes = []
-    confidences = []
-
-    for output in layerOutputs:
-        for detection in output:
-            scores = detection[5:]
-            class_id = np.argmax(scores)
-            confidence = scores[class_id]
-            if confidence > 0.5:
-                center_x = int(detection[0] * width)
-                center_y = int(detection[1] * height)
-                w = int(detection[2] * width)
-                h = int(detection[3] * height)
-                x = int(center_x - w/2)
-                y = int(center_y - h/2)
-                boxes.append([x, y, w, h])
-                confidences.append(float(confidence))
-
-    indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-    return [boxes[i] + [confidences[i]] for i in indices.flatten()]
-
 frame_count = 0
 while True:
     ret, frame = cap.read()
@@ -68,7 +36,6 @@ while True:
     for detection in vehicle_detections.boxes.data.tolist():
         if len(detection) == 6:
             x1, y1, x2, y2, score, class_id = detection
-            track_id = None
         elif len(detection) == 7:
             x1, y1, x2, y2, track_id, score, class_id = detection
         else:
@@ -77,15 +44,14 @@ while True:
         if int(class_id) in vehicle_classes:
             vehicles_detected.append([x1, y1, x2, y2, track_id, score])
 
-    # Detect license plates in the current frame using YOLOv4
-    license_plates = detect_license_plates(frame, net)
+    # Detect license plates in the current frame
+    license_plate_detections = license_plate_detector(frame)[0]
 
-    for license_plate in license_plates:
-        x, y, w, h, score_lp = license_plate
-        x1_lp, y1_lp, x2_lp, y2_lp = x, y, x + w, y + h
+    for license_plate in license_plate_detections.boxes.data.tolist():
+        x1_lp, y1_lp, x2_lp, y2_lp, score_lp, class_id_lp = license_plate
 
         # Assign license plate to a detected vehicle
-        assigned_car = assign_car([x1_lp, y1_lp, x2_lp, y2_lp, score_lp, 0], vehicles_detected)
+        assigned_car = assign_car(license_plate, vehicles_detected)
         if assigned_car != -1:
             x1_v, y1_v, x2_v, y2_v, car_id = assigned_car
 
@@ -108,6 +74,7 @@ while True:
 # Release resources
 cap.release()
 csv_file.close()
+
 
 # Apply annotations on a video:
 # Open the CSV file with saved detection results
