@@ -5,3 +5,9 @@ pandas
 matplotlib
 Pillow
 scipy
+paddlepaddle
+pymuPDF
+lmdb
+easydict
+tqdm
+paddleocr
