@@ -9,8 +9,13 @@ from paddleocr import PaddleOCR
 reader = easyocr.Reader(['en'])
 
 # We'll try out the paddle ocr model:
-ocr = PaddleOCR(lang='ar')
-ocr.load_model("models/arabic_PP-OCRv3_rec_infer/inference.pdmodel", "models/arabic_PP-OCRv3_rec_infer/inference.pdiparams")
+ocr = PaddleOCR(lang='ar')  # Normal model.
+model_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdmodel"
+params_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdiparams"
+
+# Load the model
+model = paddle.jit.load(model_path, params_path)
+# ocr.load_model("models/arabic_PP-OCRv3_rec_infer/inference.pdmodel", "models/arabic_PP-OCRv3_rec_infer/inference.pdiparams")
 # Mapping dictionaries for character conversion
 # Mapping characters that can be confused with numbers
 dict_char_to_int = {
