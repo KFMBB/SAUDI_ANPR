@@ -14,3 +14,4 @@ paddleocr
 google-cloud-storage
 easyocr
 langid
+pytesseract
