@@ -12,3 +12,4 @@ easydict
 tqdm
 paddleocr
 google-cloud-storage
+easyocr
