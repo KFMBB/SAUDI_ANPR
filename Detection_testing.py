@@ -5,7 +5,7 @@ from ultralytics import YOLO
 from Helper_util import preprocess_frame, assign_car
 
 # Load YOLO models for vehicles and license plates
-vehicle_detector = YOLO('yolov8m.pt')
+vehicle_detector = YOLO('/content/drive/MyDrive/ANPR/models/yolov8n.pt')
 license_plate_detector = YOLO('/content/drive/MyDrive/ANPR/models/best_license_plate_detector.pt')
 
 # Define video capture
@@ -22,7 +22,7 @@ csv_writer.writerow(['Frame', 'Vehicle_ID', 'BBox_Vehicle', 'BBox_License_Plate'
 
 # Set vehicle class IDs
 vehicle_classes = [2, 3, 5, 7]  # IDs for vehicles
-vehicle_detection_threshold = 0.65  # The detection threshold for the yolo model
+
 frame_count = 0
 while True:
     ret, frame = cap.read()
@@ -33,7 +33,6 @@ while True:
     vehicle_detections = vehicle_detector.track(frame, persist=True, tracker="bytetrack.yaml")[0]
 
     vehicles_detected = []
-    cropped_vehicles_detected = []
     for detection in vehicle_detections.boxes.data.tolist():
         if len(detection) == 6:
             x1, y1, x2, y2, score, class_id = detection
@@ -42,16 +41,11 @@ while True:
         else:
             continue
 
-        if int(class_id) in vehicle_classes and score >= vehicle_detection_threshold:
-            # Store each vehicle detected with a confidence threshold at 65%
+        if int(class_id) in vehicle_classes:
             vehicles_detected.append([x1, y1, x2, y2, track_id, score])
-            cropped_vehicles_detected.append(frame[int(y1):int(y2), int(x1): int(x2), :])
 
-    # Rather than making the model license plate model try to detect in the whole image space, we'll just pass the
-    # cropped detected vehicles.
-    license_plate_detections = []
-    for vehicle in cropped_vehicles_detected:
-        license_plate_detections.append(license_plate_detector(vehicle)[0])
+    # Detect license plates in the current frame
+    license_plate_detections = license_plate_detector(frame)[0]
 
     for license_plate in license_plate_detections.boxes.data.tolist():
         x1_lp, y1_lp, x2_lp, y2_lp, score_lp, class_id_lp = license_plate
@@ -145,9 +139,3 @@ with open(csv_file, 'r') as file:
 # Release video resources
 cap.release()
 out.release()
-
-"""
-Note to future self:
-Check Parallelization for better processing time.
-Remember temporal redundancy.
-"""

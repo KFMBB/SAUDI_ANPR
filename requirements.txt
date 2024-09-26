@@ -11,3 +11,4 @@ lmdb
 easydict
 tqdm
 paddleocr
+google-cloud-storage

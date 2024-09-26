@@ -10,11 +10,13 @@ reader = easyocr.Reader(['en'])
 
 # We'll try out the paddle ocr model:
 ocr = PaddleOCR(lang='ar')  # Normal model.
+# Since im running this on colab later I'll set the directories to fit the drive.
+# How to load paddle model:
+# PaddleOCR(use_angle_cls = True, use_space_char = True, lang = "en", rec_model_dir="your trained model path")
 model_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdmodel"
 params_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdiparams"
-
-# Load the model
-model = paddle.jit.load(model_path, params_path)
+# Tuned model:
+model = paddle.jit.load(model_path, params_path) # We may need to remove the params_path.
 # ocr.load_model("models/arabic_PP-OCRv3_rec_infer/inference.pdmodel", "models/arabic_PP-OCRv3_rec_infer/inference.pdiparams")
 # Mapping dictionaries for character conversion
 # Mapping characters that can be confused with numbers
