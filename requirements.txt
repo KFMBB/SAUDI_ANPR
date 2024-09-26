@@ -13,3 +13,4 @@ tqdm
 paddleocr
 google-cloud-storage
 easyocr
+langid
