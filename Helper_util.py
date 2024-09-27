@@ -16,7 +16,7 @@ ocr = PaddleOCR(lang='ar')  # Normal model.
 model_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdmodel"
 params_path = "/content/SAUDI_ANPR/models/arabic_PP-OCRv3_rec_infer/inference.pdiparams"
 # Tuned model:
-model = paddle.jit.load(model_path, params_path) # We may need to remove the params_path.
+model = paddle.jit.load(model_path, params_path)  # We may need to remove the params_path.
 # ocr.load_model("models/arabic_PP-OCRv3_rec_infer/inference.pdmodel", "models/arabic_PP-OCRv3_rec_infer/inference.pdiparams")
 # Mapping dictionaries for character conversion
 # Mapping characters that can be confused with numbers

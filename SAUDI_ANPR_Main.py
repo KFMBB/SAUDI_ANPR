@@ -5,16 +5,16 @@ import cv2
 # 2- We'll use Bytetracker model to keep tracking our object on the road (object tracking).
 # 3- Lastly using google vision api we'll read the license plate contents.
 import Helper_util
-from Helper_util import assign_car, read_license_plate, write_csv, preprocess_frame,read_plate,read_license_plate_Eocr,read_license_plate_combined
+from Helper_util import assign_car,write_csv, preprocess_frame,read_license_plate_Eocr,read_license_plate_combined
 
 results = {}  # We'll save our results for processing later.
 
 # load models
 # We're using two pre-trained models:
 # 1- The first model will focus on detecting cars while the other will focus on detecting license plates:
-model = YOLO('models/yolov8n.pt')  # Load the nano version of the yolo model.
+model = YOLO('models/yolov8m.pt')  # Load the nano version of the yolo model.
 # 2- The second model will be used to detect the license plates.
-license_plate_detector = YOLO('models/best_license_plate_detector.pt')
+license_plate_detector = YOLO('models/Fine_Tuned_LP_Model.pt')
 # load video
 cap = cv2.VideoCapture("input/testing.mp4")
 # Since we're detecting vehicles we'll set a list with the YOLO class_id for vehicles.
