@@ -9,7 +9,7 @@ import json
 
 # Load the Google vision model:
 # Path to your JSON configuration file
-json_path = "/content/capstone-t5-4494681f8d0c.json" # I sent the json file in the group, btw its private.
+json_path = "Change on run time" # I sent the json file in the group, btw its private.
 
 # Load configuration from JSON file
 with open(json_path, 'r') as file:
