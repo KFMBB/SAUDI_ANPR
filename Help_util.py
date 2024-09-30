@@ -9,7 +9,7 @@ import json
 
 # Load the Google vision model:
 # Path to your JSON configuration file
-json_path = "/content/speed-detection-with-cctv-ai-f48de7401899.json" # I sent the json file in the group, btw its private.
+json_path = "C:/Users/lena5/Downloads/speed-detection-with-cctv-ai-f48de7401899.json" # I sent the json file in the group, btw its private.
 
 # Load configuration from JSON file
 with open(json_path, 'r') as file:
