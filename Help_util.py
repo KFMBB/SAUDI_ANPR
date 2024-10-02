@@ -88,36 +88,36 @@ def assign_car(license_plate, vehicle_track_ids, tolerance=0.1):
 
 
 
-def assign_car(license_plate, vehicle_track_ids):
-    """
-    Retrieve the vehicle coordinates and ID based on the license plate coordinates.
+# def assign_car(license_plate, vehicle_track_ids):
+#     """
+#     Retrieve the vehicle coordinates and ID based on the license plate coordinates.
 
-    Args:
-        license_plate (tuple): Tuple containing the coordinates of the license plate (x1, y1, x2, y2, score, class_id).
-        vehicle_track_ids (list): List of vehicle track IDs and their corresponding coordinates.
+#     Args:
+#         license_plate (tuple): Tuple containing the coordinates of the license plate (x1, y1, x2, y2, score, class_id).
+#         vehicle_track_ids (list): List of vehicle track IDs and their corresponding coordinates.
 
-    Returns:
-        tuple: Tuple containing the vehicle coordinates (x1, y1, x2, y2) and ID.
-    """
-    if len(license_plate) == 6:
-            x1_lp, y1_lp, x2_lp, y2_lp, score_lp, class_id_lp = license_plate
-    elif len(license_plate) == 5:  # In case of missing class_id, default or skip
-            x1_lp, y1_lp, x2_lp, y2_lp, score_lp = license_plate
-            class_id_lp = None  # Handle the case of missing class_id
+#     Returns:
+#         tuple: Tuple containing the vehicle coordinates (x1, y1, x2, y2) and ID.
+#     """
+#     if len(license_plate) == 6:
+#             x1_lp, y1_lp, x2_lp, y2_lp, score_lp, class_id_lp = license_plate
+#     elif len(license_plate) == 5:  # In case of missing class_id, default or skip
+#             x1_lp, y1_lp, x2_lp, y2_lp, score_lp = license_plate
+#             class_id_lp = None  # Handle the case of missing class_id
 
-    foundIt = False
-    for j in range(len(vehicle_track_ids)):
-        xcar1, ycar1, xcar2, ycar2, car_id = vehicle_track_ids[j][:5]
+#     foundIt = False
+#     for j in range(len(vehicle_track_ids)):
+#         xcar1, ycar1, xcar2, ycar2, car_id = vehicle_track_ids[j][:5]
 
-        if x1_lp > xcar1 and y1_lp > ycar1 and x2_lp < xcar2 and y2_lp < ycar2:
-            car_indx = j
-            foundIt = True
-            break
+#         if x1_lp > xcar1 and y1_lp > ycar1 and x2_lp < xcar2 and y2_lp < ycar2:
+#             car_indx = j
+#             foundIt = True
+#             break
 
-    if foundIt:
-        return vehicle_track_ids[car_indx][:5]
+#     if foundIt:
+#         return vehicle_track_ids[car_indx][:5]
 
-    return -1, -1, -1, -1, -1
+#     return -1, -1, -1, -1, -1
 
 def read_license_plate(cropped_plate):
     """
@@ -191,6 +191,62 @@ def read_license_plate(cropped_plate):
         return formatted_plate, confidence
 
     return None, None
+
+import cv2
+import re
+from google.cloud import vision
+
+client = vision.ImageAnnotatorClient()
+
+def read_czech_license_plate(cropped_plate):
+    """
+    Detect and format text from a cropped license plate for the Czech Republic using Google Vision API.
+
+    Args:
+        cropped_plate (Image): Cropped image containing the license plate.
+
+    Returns:
+        tuple: (plate_text, confidence, plate_type)
+    """
+    # Convert the cropped plate image to bytes
+    success, encoded_image = cv2.imencode('.png', cropped_plate)
+    content = encoded_image.tobytes()
+
+    image = vision.Image(content=content)
+
+    # Perform text detection
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+
+    if not texts:
+        print("No text detected in the plate.")
+        return None, 0.0, None
+
+    # Extract all detected text
+    all_text = texts[0].description if texts else ""
+
+    # Filter for ASCII alphanumeric characters, spaces, and hyphens
+    filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace() or char == '-'))
+
+    # Remove spaces and convert to uppercase
+    plate_text = filtered_text.replace(" ", "").upper()
+
+    # Define patterns for different types of Czech plates
+    standard_pattern = re.compile(r'^([ABCEHIJKLMPSTUZ])(\d[A-Z]|[A-Z]\d|\d{2})\d{4}$')
+    custom_pattern = re.compile(r'^[A-FHIJ-NP-TV-Z0-9]{3}-[A-FHIJ-NP-TV-Z0-9]{5}$')
+    historic_pattern = re.compile(r'^[0-9]{2}V[0-9]{4}$')
+
+    confidence = texts[0].confidence if hasattr(texts[0], 'confidence') else 0.0
+
+    if standard_pattern.match(plate_text):
+        return plate_text, confidence, "standard"
+    elif custom_pattern.match(plate_text) and any(char.isdigit() for char in plate_text):
+        return plate_text, confidence, "custom"
+    elif historic_pattern.match(plate_text):
+        return plate_text, confidence, "historic"
+    else:
+        print("Detected text does not match any known Czech license plate format.")
+        return None, confidence, None
 
 def write_csv(results, output_path):
     """
