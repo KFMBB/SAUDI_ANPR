@@ -192,11 +192,6 @@ def read_license_plate(cropped_plate):
 
     return None, None
 
-import cv2
-import re
-from google.cloud import vision
-
-client = vision.ImageAnnotatorClient()
 
 def read_czech_license_plate(cropped_plate):
     """
@@ -247,6 +242,69 @@ def read_czech_license_plate(cropped_plate):
     else:
         print("Detected text does not match any known Czech license plate format.")
         return None, confidence, None
+
+def global_read_license_plate(cropped_plate):
+    """
+    Detect and format text from a cropped license plate using Google Vision API.
+
+    Args:
+        cropped_plate (Image): Cropped image containing the license plate.
+
+    Returns:
+        str: Detected license plate text.
+    """
+    # Convert the cropped plate image to bytes
+    success, encoded_image = cv2.imencode('.png', cropped_plate)
+    if not success:
+        print("Error encoding the image.")
+        return None, None
+    content = encoded_image.tobytes()
+
+    # Create a Google Vision API image object
+    image = vision.Image(content=content)
+
+    # Perform text detection using the Vision API
+    response = client.text_detection(image=image)
+    texts = response.text_annotations
+
+    if not texts:
+        print("No text detected in the plate.")
+        return None, None
+
+    # Extract the full text detected
+    all_text = texts[0].description if texts else ""
+    print(f"Detected raw text: {all_text}")
+
+    # Filter for only alphanumeric characters and spaces (remove symbols, etc.)
+    filtered_text = ''.join(char for char in all_text if char.isascii() and (char.isalnum() or char.isspace()))
+
+    # Split the filtered text into parts (words)
+    parts = filtered_text.split()
+
+    # Combine parts that are 2-8 characters long, typically found on plates
+    plate_candidates = [part for part in parts if 2 <= len(part) <= 8]
+
+    # If no candidates are found, return None
+    if not plate_candidates:
+        print("No valid license plate candidates found.")
+        return None, None
+
+    # Join all valid parts into one string (final license plate text)
+    plate_text = ' '.join(plate_candidates)
+
+    # Ensure that the text contains both numbers and letters (common in license plates)
+    if not (any(char.isalpha() for char in plate_text) and any(char.isdigit() for char in plate_text)):
+        print("No valid alphanumeric combination detected in the plate.")
+        return None, None
+
+    # Optionally, compute confidence from the Vision API response (if available)
+    confidence = texts[0].score if hasattr(texts[0], 'score') else 0.0
+
+    print(f"Detected license plate: {plate_text.strip()}")
+    
+    # Return the detected plate text and the confidence score
+    return plate_text.strip(), confidence
+
 
 def write_csv(results, output_path):
     """
